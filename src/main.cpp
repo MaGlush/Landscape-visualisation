@@ -7,8 +7,11 @@
 #define GLFW_DLL
 #include <GLFW/glfw3.h>
 #include <random>
+#include <cstdlib>
+#include <ctime>
+#include <algorithm>
 
-static const GLsizei WIDTH = 512, HEIGHT = 512; //размеры окна
+static const GLsizei WIDTH = 1024, HEIGHT = 1024; //размеры окна
 static int filling = 0;
 static bool keys[1024]; //массив состояний кнопок - нажата/не нажата
 static GLfloat lastX = 400, lastY = 300; //исходное положение мыши
@@ -19,7 +22,13 @@ static bool g_capturedMouseJustNow = false;
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
-Camera camera(float3(0.0f, 5.0f, 30.0f));
+const int n_rows = 200;
+const int n_cols = 200;
+const float roughness = 0.2; // коэффициент шероховатости
+const int terrain_size = 256 + 1; // terrain_size > min(rows,cols)
+float Landscape[terrain_size][terrain_size];
+
+Camera camera(float3(0.0f, 30.0f, 30.0f));
 
 //функция для обработки нажатий на кнопки клавиатуры
 void OnKeyboardPressed(GLFWwindow* window, int key, int scancode, int action, int mode)
@@ -125,6 +134,8 @@ void doCameraMovement(Camera &camera, GLfloat deltaTime)
 */
 static int createTriStrip(int rows, int cols, float size, GLuint &vao)
 {
+	std::random_device rd;   // non-deterministic generator
+  std::mt19937 generator(rd());
 
   int numIndices = 2 * cols*(rows - 1) + rows - 1;
 
@@ -145,16 +156,67 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao)
   std::vector<GLuint> indices_vec; //вектор индексов вершин для передачи шейдерной программе
   indices_vec.reserve(numIndices);
 
+  // Diamond-Square алгоритм
+  // Инициализация вершин
+  Landscape[0][0] = 3;
+  Landscape[0][terrain_size-1] = 12;
+  Landscape[terrain_size-1][0] = -8;
+  Landscape[terrain_size-1][terrain_size-1] = 10;
+
+  // Итеративный алгоритм
+  int step = terrain_size - 1;
+	int half = step / 2;
+	float r = roughness;
+  while(step > 1)
+  {
+		std::uniform_real_distribution<float> distribution(-r*half,r*half);
+		// Шаг square
+	  for(uint x = 0; x < size-1; x += step)
+		  for(uint y = 0; y < size-1; y += step)
+		  {
+				float a = Landscape[x][y];
+				float b = Landscape[x+step][y];
+				float c = Landscape[x][y+step];
+				float d = Landscape[x+step][y+step];
+				float average = (a + b + c + d) / 4;
+				float random = distribution(generator);
+				Landscape[x + half][y + half] = average + random;
+	  	}
+		// Шаг diamond
+	  for(uint x = half; x < size-1; x += step)
+		  for(uint y = half; y < size-1; y += step)
+		  {
+		    float a = Landscape[x][y];
+		    float b = Landscape[x-half][y-half];
+		    float c = Landscape[x-half][y+half];
+		    float average = (a + b + c) / 3;
+				float random = distribution(generator);
+		    Landscape[x-half][y] = average + random;
+		    c = Landscape[x+half][y-half];
+		    average = (a + b + c) / 3;
+		    random = distribution(generator);
+		    Landscape[x][y-half] = average + random;
+		    b = Landscape[x+half][y+half];
+		    average = (a + b + c) / 3;
+		    random = distribution(generator);
+		    Landscape[x+half][y] = average + random;
+		    c = Landscape[x-half][y+half];
+		    average = (a + b + c) / 3;
+		    random = distribution(generator);
+		    Landscape[x][y+half] = average + random;
+		  }
+  	step = half;
+		half = step / 2;
+  }
+
   for (int z = 0; z < rows; ++z)
   {
     for (int x = 0; x < cols; ++x)
     {
       //вычисляем координаты каждой из вершин
-      float xx = -size / 2 + x*size / cols;
-      float zz = -size / 2 + z*size / rows;
-      // float yy = -1.0f;
-      float r = sqrt(xx*xx + zz*zz);
-      float yy = 5.0f * (r != 0.0f ? sin(r) / r : 1.0f);
+      float xx = x;
+      float zz = z;
+      float yy = Landscape[z][x];
 
       vertices_vec.push_back(xx);
       vertices_vec.push_back(yy);
@@ -231,8 +293,8 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao)
 
   ///////////////////////
   //расчет нормалей
-  for (int i = 0; i < faces.size(); ++i)
-  {
+for (int i = 0; i < faces.size(); ++i)
+{
     //получаем из вектора вершин координаты каждой из вершин одного треугольника
     float3 A(vertices_vec.at(3 * faces.at(i).x + 0), vertices_vec.at(3 * faces.at(i).x + 1), vertices_vec.at(3 * faces.at(i).x + 2));
     float3 B(vertices_vec.at(3 * faces.at(i).y + 0), vertices_vec.at(3 * faces.at(i).y + 1), vertices_vec.at(3 * faces.at(i).y + 2));
@@ -255,26 +317,26 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao)
     normals_vec_tmp.at(faces.at(i).x) += face_normal;
     normals_vec_tmp.at(faces.at(i).y) += face_normal;
     normals_vec_tmp.at(faces.at(i).z) += face_normal;
-  }
+}
 
   //нормализуем векторы нормалей и записываем их в вектор из GLFloat, который будет передан в шейдерную программу
-  for (int i = 0; i < normals_vec_tmp.size(); ++i)
-  {
-    float3 N = normalize(normals_vec_tmp.at(i));
+for (int i = 0; i < normals_vec_tmp.size(); ++i)
+{
+	float3 N = normalize(normals_vec_tmp.at(i));
 
-    normals_vec.push_back(N.x);
-    normals_vec.push_back(N.y);
-    normals_vec.push_back(N.z);
-  }
+	normals_vec.push_back(N.x);
+	normals_vec.push_back(N.y);
+	normals_vec.push_back(N.z);
+}
 
 
-  GLuint vboVertices, vboIndices, vboNormals, vboTexCoords;
+GLuint vboVertices, vboIndices, vboNormals, vboTexCoords;
 
-  glGenVertexArrays(1, &vao);
-  glGenBuffers(1, &vboVertices);
-  glGenBuffers(1, &vboIndices);
-  glGenBuffers(1, &vboNormals);
-  glGenBuffers(1, &vboTexCoords);
+glGenVertexArrays(1, &vao);
+glGenBuffers(1, &vboVertices);
+glGenBuffers(1, &vboIndices);
+glGenBuffers(1, &vboNormals);
+glGenBuffers(1, &vboTexCoords);
 
 
   glBindVertexArray(vao); GL_CHECK_ERRORS;
@@ -305,12 +367,12 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao)
     glEnable(GL_PRIMITIVE_RESTART); GL_CHECK_ERRORS;
     glPrimitiveRestartIndex(primRestart); GL_CHECK_ERRORS;
   }
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-  glBindVertexArray(0);
+	glBindVertexArray(0);
 
 
-  return numIndices;
+	return numIndices;
 }
 
 
@@ -331,17 +393,16 @@ int initGL()
 	std::cout << "Version: " << glGetString(GL_VERSION) << std::endl;
 	std::cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 
-  std::cout << "Controls: "<< std::endl;
-  std::cout << "press left mose button to capture/release mouse cursor  "<< std::endl;
-  std::cout << "press spacebar to alternate between shaded wireframe and fill display modes" << std::endl;
-  std::cout << "press ESC to exit" << std::endl;
+	std::cout << "Controls: "<< std::endl;
+	std::cout << "press left mose button to capture/release mouse cursor  "<< std::endl;
+	std::cout << "press spacebar to alternate between shaded wireframe and fill display modes" << std::endl;
+	std::cout << "press ESC to exit" << std::endl;
 
 	return 0;
 }
 
 int main(int argc, char** argv)
 {
-    std::cout << "Starting... " << std::endl;
 	if(!glfwInit())
     return -1;
 
@@ -387,7 +448,7 @@ int main(int argc, char** argv)
 
   //Создаем и загружаем геометрию поверхности
   GLuint vaoTriStrip;
-  int triStripIndices = createTriStrip(100, 100, 40, vaoTriStrip);
+  int triStripIndices = createTriStrip(n_rows, n_cols, terrain_size, vaoTriStrip);
 
 
   glViewport(0, 0, WIDTH, HEIGHT);  GL_CHECK_ERRORS;
