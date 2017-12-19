@@ -13,13 +13,13 @@ out vec4 final_color;
 
 vec3 smooth_color(in float border, in vec3 first_color, in vec3 second_color)
 {
-    float h = vFragPosition.y;
-    if (h >= border + 2.0f)
+    float height = vFragPosition.y;
+    if (height >= border + 2.0f)
         return second_color;
 
-    float p = int(final_color * 100) % 100;
+    float p = int(height * 100) % 100;
     vec3 result_color;
-    if (h < border + 1.0f)
+    if (height < border + 1.0f)
         result_color = (p*second_color+(200-p)*first_color) / 200;
     else
         result_color = ((100+p)*second_color+(100-p)*first_color) / 200;
@@ -29,13 +29,13 @@ vec3 smooth_color(in float border, in vec3 first_color, in vec3 second_color)
 
 vec4 smooth_tex(in float border, in sampler2D first_texture, in sampler2D second_texture)
 {
-    float h = vFragPosition.y;
-    if (h >= border + 2.0f)
+    float height = vFragPosition.y;
+    if (height >= border + 2.0f)
         return texture(second_texture, vTexCoords);
 
-    float p = int(h * 100) % 100;
+    float p = int(height * 100) % 100;
     vec4 result_texture;
-    if (h < border + 1.0f)
+    if (height < border + 1.0f)
         result_texture = mix(texture(first_texture, vTexCoords), texture(second_texture, vTexCoords), p/200);
     else
         result_texture = mix(texture(first_texture, vTexCoords), texture(second_texture, vTexCoords), 0.5+p/200);
