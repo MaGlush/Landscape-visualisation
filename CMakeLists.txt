@@ -30,8 +30,6 @@ include_directories("include"  "depen" "depen/GLAD")
 
 add_executable(${PROJECT_NAME} ${glm} ${glad} ${glfw} ${sources})
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shaders" "${PROJECT_SOURCE_DIR}/build")
-
 
 link_directories("static")
-target_link_libraries(${PROJECT_NAME} glfw pthread Xinerama Xcursor X11 Xxf86vm Xrandr Xi GL dl)
+target_link_libraries(${PROJECT_NAME} glfw pthread Xinerama Xcursor X11 Xxf86vm Xrandr Xi GL dl SOIL)
