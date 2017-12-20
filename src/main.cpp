@@ -162,7 +162,7 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao) {
   Landscape[0][0] = 3;
   Landscape[0][terrain_size - 1] = 12;
   Landscape[terrain_size - 1][0] = -20;
-  Landscape[terrain_size - 1][terrain_size - 1] = -50;
+  Landscape[terrain_size - 1][terrain_size - 1] = -40;
 
   // Итеративный алгоритм
   int step = terrain_size - 1;
@@ -218,7 +218,7 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao) {
 	for (uint x = 0; x < terrain_size; ++x)
 		for (uint y = 0; y < terrain_size; ++y){
 			Landscape[x][y] = (Landscape[x][y] - min) / (max - min);
-			Landscape[x][y] = Landscape[x][y]*Landscape[x][y] - 0.35;
+			Landscape[x][y] = Landscape[x][y]*Landscape[x][y] - 0.30;
 		}
 	// Срез уровеня моря
 	for (uint x = 0; x < terrain_size; ++x)
