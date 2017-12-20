@@ -3,6 +3,7 @@
 #include "ShaderProgram.h"
 #include "common.h"
 #include "SOIL/SOIL.h"
+#include "ocean.h"
 
 // External dependencies
 #define GLFW_DLL
@@ -32,8 +33,10 @@ const int n_cols = 200;
 const float roughness = 0.2; // коэффициент шероховатости
 const int terrain_size = 256 + 1; // terrain_size > min(rows,cols)
 float Landscape[terrain_size][terrain_size];
+float Ocean[terrain_size][terrain_size];
+ClassOcean water;
 
-Camera camera(float3(0.0f, 50.0f, 30.0f));
+Camera camera(float3(0.0f, 80.0f, 30.0f));
 
 //функция для обработки нажатий на кнопки клавиатуры
 void OnKeyboardPressed(GLFWwindow* window, int key, int scancode, int action,
@@ -131,38 +134,33 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao) {
   std::random_device rd; // non-deterministic generator
   std::mt19937 generator(rd());
 
-  int numIndices = 2 * cols * (rows - 1) + rows - 1;
+    int numIndices = 2 * cols * (rows - 1) + rows - 1;
 
-  std::vector<GLfloat> vertices_vec; //вектор атрибута координат вершин
-  vertices_vec.reserve(rows * cols * 3);
+    std::vector<GLfloat> vertices_vec; //вектор атрибута координат вершин
+    vertices_vec.reserve(rows * cols * 3);
 
-  std::vector<GLfloat> normals_vec; //вектор атрибута нормалей к вершинам
-  normals_vec.reserve(rows * cols * 3);
+    std::vector<GLfloat> normals_vec; //вектор атрибута нормалей к вершинам
+    normals_vec.reserve(rows * cols * 3);
 
-  std::vector<GLfloat>
-      texcoords_vec; //вектор атрибут текстурных координат вершин
-  texcoords_vec.reserve(rows * cols * 2);
+    std::vector<GLfloat>texcoords_vec; //вектор атрибут текстурных координат вершин
+    texcoords_vec.reserve(rows * cols * 2);
 
-  std::vector<float3> normals_vec_tmp(
-      rows * cols,
-      float3(0.0f, 0.0f,
-             0.0f)); //временный вектор нормалей, используемый для расчетов
+    std::vector<float3> normals_vec_tmp(rows * cols, float3(0.0f, 0.0f,0.0f)); //временный вектор нормалей, используемый для расчетов
 
   std::vector<int3> faces; //вектор граней (треугольников), каждая грань - три
                            //индекса вершин, её составляющих; используется для
                            //удобства расчета нормалей
   faces.reserve(numIndices / 3);
 
-  std::vector<GLuint>
-      indices_vec; //вектор индексов вершин для передачи шейдерной программе
+  std::vector<GLuint> indices_vec; //вектор индексов вершин для передачи шейдерной программе
   indices_vec.reserve(numIndices);
 
   // Diamond-Square алгоритм
   // Инициализация вершин
-  Landscape[0][0] = 3;
-  Landscape[0][terrain_size - 1] = 12;
-  Landscape[terrain_size - 1][0] = -20;
-  Landscape[terrain_size - 1][terrain_size - 1] = -40;
+  Landscape[0][0] = -15;
+  Landscape[0][terrain_size - 1] = 22;
+  Landscape[terrain_size - 1][0] = 5;
+  Landscape[terrain_size - 1][terrain_size - 1] = 5;
 
   // Итеративный алгоритм
   int step = terrain_size - 1;
@@ -218,15 +216,9 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao) {
 	for (uint x = 0; x < terrain_size; ++x)
 		for (uint y = 0; y < terrain_size; ++y){
 			Landscape[x][y] = (Landscape[x][y] - min) / (max - min);
-			Landscape[x][y] = Landscape[x][y]*Landscape[x][y] - 0.30;
+			Landscape[x][y] = Landscape[x][y]*Landscape[x][y] - 0.15;
 		}
-	// Срез уровеня моря
-	for (uint x = 0; x < terrain_size; ++x)
-		for (uint y = 0; y < terrain_size; ++y){
-			if (Landscape[x][y] <= 0.0f){
-				Landscape[x][y] = 0.0f;
-			}
-		}
+
 	for (int z = 0; z < rows; ++z){
 	 	for (int x = 0; x < cols; ++x){
       //вычисляем координаты каждой из вершин
@@ -499,13 +491,15 @@ int main(int argc, char **argv) {
   std::unordered_map<GLenum, std::string> shaders;
   shaders[GL_VERTEX_SHADER] = "../shaders/vertex.glsl";
   shaders[GL_FRAGMENT_SHADER] = "../shaders/fragment.glsl";
-  ShaderProgram program(shaders);
-  GL_CHECK_ERRORS;
+  ShaderProgram program(shaders); GL_CHECK_ERRORS;
+  shaders[GL_VERTEX_SHADER] = "../shaders/ocean_vertex.glsl";
+  shaders[GL_FRAGMENT_SHADER] = "../shaders/ocean_fragments.glsl";
+  ShaderProgram oceanShader(shaders);GL_CHECK_ERRORS;
 
   //Создаем и загружаем геометрию поверхности
   GLuint vaoTriStrip;
-  int triStripIndices =
-      createTriStrip(n_rows, n_cols, terrain_size, vaoTriStrip);
+  GLuint ocean_vaoTriStrip;
+  int triStripIndices = createTriStrip(n_rows, n_cols, terrain_size, vaoTriStrip);
 
   glViewport(0, 0, WIDTH, HEIGHT);
   GL_CHECK_ERRORS;
@@ -573,13 +567,16 @@ int main(int argc, char **argv) {
   SOIL_free_image_data(image);
   glBindTexture(GL_TEXTURE_2D, 0);
 
-
+  water.load_texture();
   //цикл обработки сообщений и отрисовки сцены каждый кадр
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   while (!glfwWindowShouldClose(window)) {
     //считаем сколько времени прошло за кадр
     GLfloat currentFrame = glfwGetTime();
     deltaTime = currentFrame - lastFrame;
     lastFrame = currentFrame;
+    int ocean_triStripIndices = water.createTriStrip(n_rows, n_cols, terrain_size, ocean_vaoTriStrip);
 
     glfwPollEvents();
     doCameraMovement(camera, deltaTime);
@@ -612,6 +609,13 @@ int main(int argc, char **argv) {
     program.SetUniform("model", model);
     program.SetUniform("state",  state);
 
+    oceanShader.SetUniform("view", view);
+    GL_CHECK_ERRORS;
+    oceanShader.SetUniform("projection", projection);
+    GL_CHECK_ERRORS;
+    oceanShader.SetUniform("model", model);
+    oceanShader.SetUniform("state",  state);
+
     //рисуем плоскость
     glBindVertexArray(vaoTriStrip);
     // текстурирование
@@ -635,10 +639,18 @@ int main(int argc, char **argv) {
 		glBindTexture(GL_TEXTURE_2D, grass_texture);
 		program.SetUniform("grass_texture", 4);
 
-    glDrawElements(GL_TRIANGLE_STRIP, triStripIndices, GL_UNSIGNED_INT, nullptr);
-    GL_CHECK_ERRORS;
-    glBindVertexArray(0);
-    GL_CHECK_ERRORS;
+    // glDrawElements(GL_TRIANGLE_STRIP, triStripIndices, GL_UNSIGNED_INT, nullptr);GL_CHECK_ERRORS;
+    glBindVertexArray(0);GL_CHECK_ERRORS;
+    glBindVertexArray(ocean_vaoTriStrip);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, water_texture);
+    program.SetUniform("water_texture", 2);
+    glDrawElements(GL_TRIANGLE_STRIP, ocean_triStripIndices, GL_UNSIGNED_INT, nullptr);GL_CHECK_ERRORS;
+
+    oceanShader.StopUseShader();
+    // water.Draw(ocean_vaoTriStrip, oceanShader, projection, view);
+    glBindVertexArray(0);GL_CHECK_ERRORS;
+
 
     program.StopUseShader();
 

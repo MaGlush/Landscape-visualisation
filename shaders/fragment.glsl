@@ -14,15 +14,19 @@ out vec4 final_color;
 vec3 smooth_color(in float border, in vec3 first_color, in vec3 second_color)
 {
     float height = vFragPosition.y;
-    if (height >= border + 2.0f)
+    if (height >= border + 4.0f)
         return second_color;
 
     float p = int(height * 100) % 100;
     vec3 result_color;
     if (height < border + 1.0f)
-        result_color = (p*second_color+(200-p)*first_color) / 200;
+        result_color = (p*second_color+(400-p)*first_color) / 400;
+    else if (height < border + 2.0f)
+        result_color = ((100+p)*second_color+(300-p)*first_color) / 400;
+    else if (height < border + 3.0f)
+        result_color = ((200+p)*second_color+(200-p)*first_color) / 400;
     else
-        result_color = ((100+p)*second_color+(100-p)*first_color) / 200;
+        result_color = ((300+p)*second_color+(100-p)*first_color) / 400;
 
     return result_color;
 }
@@ -30,15 +34,19 @@ vec3 smooth_color(in float border, in vec3 first_color, in vec3 second_color)
 vec4 smooth_tex(in float border, in sampler2D first_texture, in sampler2D second_texture)
 {
     float height = vFragPosition.y;
-    if (height >= border + 2.0f)
+    if (height >= border + 4.0f)
         return texture(second_texture, vTexCoords);
 
     float p = int(height * 100) % 100;
     vec4 result_texture;
     if (height < border + 1.0f)
-        result_texture = mix(texture(first_texture, vTexCoords), texture(second_texture, vTexCoords), p/200);
+        result_texture = mix(texture(first_texture, vTexCoords), texture(second_texture, vTexCoords), p/400);
+    else if (height < border + 2.0f)
+        result_texture = mix(texture(first_texture, vTexCoords), texture(second_texture, vTexCoords), 0.25+p/400);
+    else if (height < border + 3.0f)
+        result_texture = mix(texture(first_texture, vTexCoords), texture(second_texture, vTexCoords), 0.5+p/400);
     else
-        result_texture = mix(texture(first_texture, vTexCoords), texture(second_texture, vTexCoords), 0.5+p/200);
+        result_texture = mix(texture(first_texture, vTexCoords), texture(second_texture, vTexCoords), 0.75+p/400);
 
     return result_texture;
 }
@@ -59,21 +67,22 @@ void main()
     vec3 forest_col = vec3(0.11f, 0.21f, 0.11f);
     vec3 grass_col = vec3(0.15f, 0.3f, 0.17f);
 
+    // цвет тумана
     vec4 fog_color = vec4(1,1,1,0);
-    // float perspective_far = 1000.0
-    float fog_cord = (gl_FragCoord.z/gl_FragCoord.w)/20000.0;
-
+    // глубина тумана
+    float fog_cord = (gl_FragCoord.z/gl_FragCoord.w)/2000.0f;
+    // плотность тумана
     float fog_destiny = 6.0;
     float fog = fog_cord * fog_destiny;
-    //float param = exp(-pow(1 / (fog_destiny * fog_cord), 2.0));
-
+    // коэффициент смешивания
+    float alpha =  exp(-pow(1.0 / fog, 2.0));
 
     if (vFragPosition.y <= 0){ // water_col
         result_color  = water_col;
         result_texture = texture(water_texture, vTexCoords);
     }else if (vFragPosition.y <= 2){ // sand_col
         result_color  = smooth_color(0.0f, water_col, sand_col);
-        result_texture = smooth_tex(0.0f, water_texture, sand_texture);
+        result_texture = texture(sand_texture, vTexCoords);
     }else if (vFragPosition.y <= 9){ // grass_col
         result_color  = smooth_color(2.0f, sand_col, grass_col);
         result_texture = smooth_tex(2.0f, sand_texture, grass_texture);
@@ -85,15 +94,16 @@ void main()
         result_texture = smooth_tex(20.0f, forest_texture, mountain_texture);
     }
 
+
     if (state == 1) {
-        final_color = mix(result_texture, vec4(kd * result_color , 1.0), 0.0); // result + color
-        final_color = mix(fog_color, final_color, clamp(1.0 - fog, 0.0, 1.0));
+        final_color = mix(result_texture, vec4(kd * result_color , 1.0), 0.1); // тексутра + цвет
+        final_color = mix(final_color, fog_color, alpha);
     }
     else if (state == 2){
-            final_color = mix(result_texture, vec4(kd * result_color , 1.0), 0.0);
-        // final_color =  mix(vec4(abs(vNormal), 1.0f), vec4(kd * result_color , 1.0), 0.2); // normals + color
+        final_color =  mix(vec4(abs(vNormal), 1.0f), vec4(kd * result_color, 1.0), 0.2); // нормали + цвет
+
     }else{
-        final_color = vec4(kd * result_color , 1.0); // color
-        final_color = mix(fog_color, final_color, clamp(1.0 - fog, 0.0, 1.0));
+        final_color = vec4(kd * result_color , 1.0); // цвет
+        final_color = mix(final_color, fog_color, alpha);
     }
 }
