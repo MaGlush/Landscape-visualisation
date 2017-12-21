@@ -4,6 +4,7 @@
 #include "common.h"
 #include "SOIL/SOIL.h"
 #include <vector>
+#include <iostream>
 #include <GLFW/glfw3.h>
 
 class ClassOcean
@@ -14,20 +15,22 @@ class ClassOcean
 	int terrain_size;
 
   public:
-	void load_texture()
+	GLuint load_texture()
 	{
 		glGenTextures(1, &water_texture);
-		glActiveTexture(GL_TEXTURE2);
+		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D, water_texture);
 		int width, height;
-		unsigned char *image = SOIL_load_image("../textures/water.png", &width, &height, 0, SOIL_LOAD_RGB);
+		unsigned char *image = SOIL_load_image("../textures/sea2.png", &width, &height, 0, SOIL_LOAD_RGB);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		SOIL_free_image_data(image);
 		glBindTexture(GL_TEXTURE_2D, 0);
+
+		return water_texture;
 	}
 
-	int createTriStrip(int rows, int cols, float size, GLuint &vao)
+	int createTriStrip(int rows, int cols, float size, GLuint &vao_sea)
 	{
 
 		float Ocean[terrain_size][terrain_size];
@@ -66,19 +69,19 @@ class ClassOcean
 				float xx = x;
 				float zz = z;
 				GLfloat timer = glfwGetTime();
-				float coord = (rows / 2 - x) * (rows / 2 - x) + (rows / 2 - z) * (rows / 2 - z);
-				float yy = sinf(timer + sqrt(coord) / 1.3) + 0.16;
+				float coord = (2*rows - x) * (2*rows - x) + (cols / 2 - z) * (cols /2 - z);
+				float yy = sinf((3.0f*timer + sqrt(coord))/4.0f)/3.0f + 1.0f;
 
 				vertices_vec.push_back(xx);
 				vertices_vec.push_back(yy);
 				vertices_vec.push_back(zz);
 
-				texcoords_vec.push_back(x / float(cols - 1)); // вычисляем первую
+				texcoords_vec.push_back((-(4.0f*timer + sqrt(coord))/3.5f+x) / float(cols - 1)); // вычисляем первую
 				// текстурную координату u,
 				// для плоскости это просто
 				// относительное положение
 				// вершины
-				texcoords_vec.push_back(z / float(rows - 1)); // аналогично вычисляем вторую текстурную координату v
+				texcoords_vec.push_back((-(timer + sqrt(coord))/3.5f+z) / float(rows - 1)); // аналогично вычисляем вторую текстурную координату v
 			}
 		}
 
@@ -207,13 +210,13 @@ class ClassOcean
 
 		GLuint vboVertices, vboIndices, vboNormals, vboTexCoords;
 
-		glGenVertexArrays(1, &vao);
+		glGenVertexArrays(1, &vao_sea);
 		glGenBuffers(1, &vboVertices);
 		glGenBuffers(1, &vboIndices);
 		glGenBuffers(1, &vboNormals);
 		glGenBuffers(1, &vboTexCoords);
 
-		glBindVertexArray(vao);
+		glBindVertexArray(vao_sea);
 		GL_CHECK_ERRORS;
 		{
 
@@ -268,33 +271,15 @@ class ClassOcean
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 		glBindVertexArray(0);
-
+		vao = vao_sea;
 		return numIndices;
 	}
 
   public:
-	ClassOcean(const int size)
-	{
+	GLuint vao;
+
+	ClassOcean(const int size){
 		terrain_size = size;
-	}
-
-	void Draw(GLuint vao, const ShaderProgram &shader, const float4x4 &projection, const float4x4 &view)
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		shader.StartUseShader();
-		shader.SetUniform("projection", projection);
-		shader.SetUniform("view", view);
-
-		glBindVertexArray(vao);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, water_texture);
-		shader.SetUniform("water_texture", 2);
-
-		glDrawElements(GL_TRIANGLE_STRIP, numIndices, GL_UNSIGNED_INT, nullptr);
-		GL_CHECK_ERRORS;
-		glBindVertexArray(0);
-		GL_CHECK_ERRORS;
 	}
 };
 
