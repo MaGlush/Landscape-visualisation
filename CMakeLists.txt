@@ -19,6 +19,10 @@ file(GLOB glfw
     ${DEPEN_DIR}/GLFW/*.h
 )
 
+file(GLOB SOIL
+    ${DEPEN_DIR}/SOIL/*.h
+)
+
 file(GLOB sources
     include/*.h
     include/*.hpp
@@ -26,10 +30,11 @@ file(GLOB sources
     src/*.c
 )
 
-include_directories("include"  "depen" "depen/GLAD")
+include_directories("include" "depen" "depen/GLAD")
 
-add_executable(${PROJECT_NAME} ${glm} ${glad} ${glfw} ${sources})
+add_executable(${PROJECT_NAME} ${glm} ${glad} ${glfw} ${sources} ${SOIL})
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
+
 
 link_directories("static")
 target_link_libraries(${PROJECT_NAME} glfw pthread Xinerama Xcursor X11 Xxf86vm Xrandr Xi GL dl SOIL)
