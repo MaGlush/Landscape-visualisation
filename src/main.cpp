@@ -8,12 +8,14 @@
 // External dependencies
 #define GLFW_DLL
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 // #include <algorithm>
 #include <cstdlib>
 #include <ctime>
 #include <random>
 #include <climits>
 #include <iostream>
+
 
 static const GLsizei WIDTH = 1024, HEIGHT = 1024; //размеры окна
 static int filling = 0;
@@ -27,6 +29,7 @@ static int state = 1; // режим просмотра
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 GLfloat drawSeaTime = 0.0f; // скорость отрисовки - уменьшить для увеличения производительности 
+
 
 const int max_height = 85;
 const int n_rows = 200;
@@ -231,7 +234,7 @@ static int createTriStrip(int rows, int cols, float size, GLuint &vao)
 		for (uint y = 0; y < terrain_size; ++y)
 		{
 			Landscape[x][y] = (Landscape[x][y] - min) / (max - min);
-			Landscape[x][y] = Landscape[x][y] * Landscape[x][y] - 0.15;
+			Landscape[x][y] = Landscape[x][y] * Landscape[x][y] - 0.16;
 		}
 
 	for (int z = 0; z < rows; ++z)

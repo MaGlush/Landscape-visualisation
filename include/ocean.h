@@ -69,19 +69,20 @@ class ClassOcean
 				float xx = x;
 				float zz = z;
 				GLfloat timer = glfwGetTime();
-				float coord = (2*rows - x) * (2*rows - x) + (cols / 2 - z) * (cols /2 - z);
-				float yy = sinf((3.0f*timer + sqrt(coord))/4.0f)/3.0f + 1.0f;
+				// float coord = (2*rows - x) * (2*rows - x) + (cols / 2 - z) * (cols /2 - z);
+				// float yy = sinf((3.0f*timer + sqrt(coord))/4.0f)/3.0f + 1.0f;
+				float yy = float(sin((((-timer + x/5.0f)*40.0f)/360.0f)*3.141592654*2.0f)) + 1.0f;
 
 				vertices_vec.push_back(xx);
 				vertices_vec.push_back(yy);
 				vertices_vec.push_back(zz);
 
-				texcoords_vec.push_back((-(4.0f*timer + sqrt(coord))/3.5f+x) / float(cols - 1)); // вычисляем первую
+				texcoords_vec.push_back((-(4.0f*timer)/3.5f+x) / float(cols - 1)); // вычисляем первую
 				// текстурную координату u,
 				// для плоскости это просто
 				// относительное положение
 				// вершины
-				texcoords_vec.push_back((-(timer + sqrt(coord))/3.5f+z) / float(rows - 1)); // аналогично вычисляем вторую текстурную координату v
+				texcoords_vec.push_back((-(timer)/3.5f+z) / float(rows - 1)); // аналогично вычисляем вторую текстурную координату v
 			}
 		}
 
