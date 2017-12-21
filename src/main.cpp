@@ -9,7 +9,7 @@
 #define GLFW_DLL
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-// #include <algorithm>
+#include <algorithm>
 #include <cstdlib>
 #include <ctime>
 #include <random>
@@ -614,7 +614,7 @@ int main(int argc, char **argv)
 		lastFrame = currentFrame;
 		drawSeaTime += deltaTime;
 		if (drawSeaTime > 0.15f){ // перерисовка волн
-			ocean_triStripIndices = sea.createTriStrip(n_rows, n_cols, terrain_size, ocean_vaoTriStrip);
+			ocean_triStripIndices = sea.createSea(n_rows, n_cols, terrain_size, ocean_vaoTriStrip);
 			drawSeaTime = 0.0f;
 		}
 		glfwPollEvents();

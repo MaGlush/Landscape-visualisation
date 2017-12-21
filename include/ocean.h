@@ -30,7 +30,7 @@ class ClassOcean
 		return water_texture;
 	}
 
-	int createTriStrip(int rows, int cols, float size, GLuint &vao_sea)
+	int createSea(int rows, int cols, float size, GLuint &vao_sea)
 	{
 
 		float Ocean[terrain_size][terrain_size];

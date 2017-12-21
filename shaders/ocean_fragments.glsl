@@ -44,7 +44,7 @@ void main()
         final_color = vec4(kd * result_color , 1.0); // цвет
         final_color = mix(final_color, fog_color, alpha);
     }
-    float sq = sqrt((120 - vFragPosition.x)*(120 - vFragPosition.x) + (60 - vFragPosition.z)*(60 - vFragPosition.z));
-    final_color = final_color*vec4(kd*water_col, sq/80.0f);
+    float sq = sqrt((115 - vFragPosition.x)*(115 - vFragPosition.x) + (70 - vFragPosition.z)*(70 - vFragPosition.z));
+    final_color = final_color*vec4(kd*water_col, sq/70.0f);
     
 }
