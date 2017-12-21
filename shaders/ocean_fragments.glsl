@@ -46,5 +46,6 @@ void main()
     }
     float sq = sqrt((115 - vFragPosition.x)*(115 - vFragPosition.x) + (70 - vFragPosition.z)*(70 - vFragPosition.z));
     final_color = final_color*vec4(kd*water_col, sq/70.0f);
-    
+    // final_color = final_color*vec4(kd*water_col, 0.7f);
+
 }

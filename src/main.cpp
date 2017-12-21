@@ -28,7 +28,7 @@ static int state = 1; // режим просмотра
 
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
-GLfloat drawSeaTime = 0.0f; // скорость отрисовки - уменьшить для увеличения производительности 
+GLfloat drawSeaTime = 0.5f; // скорость отрисовки - увеличить для увеличения производительности
 
 
 const int max_height = 85;
@@ -613,6 +613,8 @@ int main(int argc, char **argv)
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 		drawSeaTime += deltaTime;
+        glfwPollEvents();
+		doCameraMovement(camera, deltaTime);
 		if (drawSeaTime > 0.15f){ // перерисовка волн
 			ocean_triStripIndices = sea.createSea(n_rows, n_cols, terrain_size, ocean_vaoTriStrip);
 			drawSeaTime = 0.0f;
@@ -621,7 +623,7 @@ int main(int argc, char **argv)
 		doCameraMovement(camera, deltaTime);
 
 		//очищаем экран каждый кадр
-		glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		GL_CHECK_ERRORS;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		GL_CHECK_ERRORS;
@@ -672,7 +674,7 @@ int main(int argc, char **argv)
 		glBindVertexArray(0);
 		GL_CHECK_ERRORS;
 		program.StopUseShader();
-		
+
 		// рисуем волны
 		oceanShader.StartUseShader();
 		oceanShader.SetUniform("view", view);
@@ -683,19 +685,19 @@ int main(int argc, char **argv)
 		oceanShader.SetUniform("state", state);
 
 		glBindVertexArray(ocean_vaoTriStrip);
-		
+
 		glActiveTexture(GL_TEXTURE5);
 		glBindTexture(GL_TEXTURE_2D, sea_water_texture);
 		oceanShader.SetUniform("water_texture", 5);
-		
+
 		glDrawElements(GL_TRIANGLE_STRIP, ocean_triStripIndices, GL_UNSIGNED_INT, nullptr);
 		GL_CHECK_ERRORS;
 
 		glBindVertexArray(0);
 		GL_CHECK_ERRORS;
 
-		oceanShader.StopUseShader();		
-	
+		oceanShader.StopUseShader();
+
 		glfwSwapBuffers(window);
 	}
 
